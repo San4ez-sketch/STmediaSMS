@@ -1,0 +1,95 @@
+/* Дополнительные стили для чатов и звонков */
+.header-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.action-btn {
+  background: #2ECC71;
+  border: none;
+  color: white;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.chat-container {
+  display: flex;
+  gap: 15px;
+  margin-top: 15px;
+  height: calc(100vh - 100px);
+}
+
+.chat-list {
+  width: 250px;
+  background: #1e293b;
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.chat-window {
+  flex: 1;
+  background: #1e293b;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+}
+
+.chat-header {
+  padding: 12px;
+  border-bottom: 1px solid #334155;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.call-btns button {
+  background: #334155;
+  border: none;
+  color: white;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-left: 5px;
+}
+
+.messages-area {
+  flex: 1;
+  padding: 15px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.msg {
+  max-width: 60%;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.msg.incoming {
+  background: #334155;
+  align-self: flex-start;
+}
+
+.msg.outgoing {
+  background: #2ECC71;
+  align-self: flex-end;
+}
+
+.message-input-box {
+  padding: 10px;
+  display: flex;
+  gap: 10px;
+  border-top: 1px solid #334155;
+}
+
+.message-input-box input {
+  flex: 1;
+  margin: 0;
+  width: auto;
+}

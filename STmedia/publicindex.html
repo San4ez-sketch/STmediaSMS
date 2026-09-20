@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>STmedia</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+
+  <!-- Форма Авторизации -->
+  <div id="authModal" class="modal">
+    <div class="modal-content">
+      <h2>Вход в STmedia</h2>
+      <input type="text" id="authUsername" placeholder="User Name (@tag)">
+      <input type="password" id="authPassword" placeholder="Пароль">
+      <input type="text" id="authNickname" placeholder="Nick Name (Имя)">
+      <input type="text" id="authUzx" placeholder="UZX Статус">
+      <button onclick="login()">Войти / Зарегистрироваться</button>
+    </div>
+  </div>
+
+  <div class="app-container">
+    <!-- Сайдбар -->
+    <nav class="sidebar">
+      <div class="logo">
+        <div class="logo-box">ST</div>
+        <span>STmedia</span>
+      </div>
+      <button onclick="showTab('chats')">💬 Чаты</button>
+      <button onclick="showTab('flash')">⚡ Flash</button>
+      <button onclick="showTab('channels')">📢 Каналы</button>
+      <button onclick="showTab('profile')">👤 Профиль</button>
+    </nav>
+
+    <!-- Главная область -->
+    <main class="main-content">
+      
+      <!-- Чаты -->
+      <section id="chats-tab" class="tab active">
+        <div class="chat-layout">
+          <div class="chat-sidebar">
+            <button class="action-btn" onclick="startNewChat()">+ Новый чат</button>
+            <div id="chatList" class="chat-list"></div>
+          </div>
+          <div class="chat-window">
+            <div class="chat-header">
+              <span id="activeChatName">Выберите чат</span>
+              <div class="call-actions">
+                <button onclick="initCall('audio')">📞</button>
+                <button onclick="initCall('video')">📹</button>
+              </div>
+            </div>
+            <div id="messagesArea" class="messages-area"></div>
+            <div class="input-area">
+              <input type="text" id="messageInput" placeholder="Напишите сообщение...">
+              <button onclick="sendMsg()">Отправить</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Flash (Shorts) -->
+      <section id="flash-tab" class="tab">
+        <div class="flash-header">
+          <h2>Flash ⚡</h2>
+          <label class="action-btn">
+            ➕ Загрузить видео
+            <input type="file" id="flashFileInput" accept="video/*" onchange="uploadVideo()" style="display:none">
+          </label>
+        </div>
+        <div id="flashFeed" class="flash-feed"></div>
+      </section>
+
+      <!-- Каналы -->
+      <section id="channels-tab" class="tab">
+        <h2>📢 Каналы</h2>
+        <button class="action-btn" onclick="alert('Канал создан!')">+ Создать канал</button>
+      </section>
+
+      <!-- Профиль -->
+      <section id="profile-tab" class="tab">
+        <h2>Профиль</h2>
+        <p><b>Nick Name:</b> <span id="profNick"></span></p>
+        <p><b>User Name:</b> <span id="profUser"></span></p>
+        <p><b>UZX Статус:</b> <span id="profUzx"></span></p>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Видеозвонок окно -->
+  <div id="callOverlay" class="call-overlay" style="display:none;">
+    <video id="localVideo" autoplay muted></video>
+    <video id="remoteVideo" autoplay></video>
+    <button onclick="endCall()" class="end-call-btn">Завершить звонок</button>
+  </div>
+
+  <script>
+    const socket = io();
+    let currentUser = null;
+    let activeChat = null;
+    let peerConnection;
+
+    // Вход
+    async function login() {
+      const username = document.getElementById('authUsername').value;
+      const password = document.getElementById('authPassword').value;
+      const nickname = document.getElementById('authNickname').value;
+      const uzx = document.getElementById('authUzx').value;
+
+      const res = await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password, nickname, uzx })
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        currentUser = { username, ...data.user };
+        document.getElementById('authModal').style.display = 'none';
+        document.getElementById('profNick').innerText = currentUser.nickname;
+        document.getElementById('profUser').innerText = '@' + currentUser.username;
+        document.getElementById('profUzx').innerText = currentUser.uzx;
+
+        socket.emit('join', { username });
+        loadFlash();
+      } else {
+        alert(data.error);
+      }
+    }
+
+    // Сообщения
+    function sendMsg() {
+      const input = document.getElementById('messageInput');
+      if (!input.value || !activeChat) return;
+
+      socket.emit('private_message', {
+        to: activeChat,
+        sender: currentUser.username,
+        message: input.value,
+        uzx: currentUser.uzx
+      });
+      input.value = '';
+    }
+
+    socket.on('receive_message', (data) => {
+      const area = document.getElementById('messagesArea');
+      const msg = document.createElement('div');
+      msg.className = `msg ${data.sender === currentUser.username ? 'outgoing' : 'incoming'}`;
+      msg.innerHTML = `<b>${data.sender}</b> <small>[${data.uzx}]</small><br>${data.message}`;
+      area.appendChild(msg);
+      area.scrollTop = area.scrollHeight;
+    });
+
+    function startNewChat() {
+      const name = prompt('Введите @username собеседника:');
+      if (name) {
+        activeChat = name;
+        document.getElementById('activeChatName').innerText = '@' + name;
+      }
+    }
+
+    // Flash Видео
+    async function uploadVideo() {
+      const file = document.getElementById('flashFileInput').files[0];
+      if (!file) return;
+
+      const formData = new FormData();
+      formData.append('video', file);
+      formData.append('username', currentUser.username);
+      formData.append('uzx', currentUser.uzx);
+
+      await fetch('/api/flash/upload', { method: 'POST', body: formData });
+      loadFlash();
+    }
+
+    async function loadFlash() {
+      const res = await fetch('/api/flash');
+      const flashes = await res.json();
+      const feed = document.getElementById('flashFeed');
+      feed.innerHTML = flashes.map(f => `
+        <div class="flash-card">
+          <video src="${f.videoUrl}" controls loop></video>
+          <div class="flash-info">@${f.author} • ${f.uzx}</div>
+        </div>
+      `).join('');
+    }
+
+    function showTab(tab) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.getElementById(`${tab}-tab`).classList.add('active');
+    }
+  </script>
+</body>
+</html>
