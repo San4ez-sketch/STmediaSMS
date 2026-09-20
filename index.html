@@ -37,7 +37,7 @@
     }
 
     /* ОСНОВНОЙ ИНТЕРФЕЙС */
-    .app-header { background: var(--card-bg); padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+    .app-header { background: var(--card-bg); padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; z-index: 10; }
     .logo { display: flex; align-items: center; gap: 10px; font-weight: bold; font-size: 18px; }
     .logo-box { width: 34px; height: 34px; background: var(--accent); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 900; }
     
@@ -56,7 +56,7 @@
     .contacts-list { flex: 1; overflow-y: auto; padding: 8px; display: flex; flex-direction: column; gap: 6px; }
     .contact-item {
       padding: 10px 12px; background: var(--card-bg); border-radius: 12px; cursor: pointer;
-      border: 1px solid transparent; display: flex; align-items: center; gap: 12px; transition: 0.2s;
+      border: 1px solid transparent; display: flex; align-items: center; gap: 12px; transition: 0.2s; user-select: none;
     }
     .contact-item:active { background: #26334d; }
     .contact-item.active { border-color: var(--accent); background: #1e3a34; }
@@ -64,7 +64,7 @@
     .avatar { width: 42px; height: 42px; border-radius: 50%; object-fit: cover; background: var(--border); display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 16px; flex-shrink: 0; }
 
     /* ОКНО ЧАТА */
-    .chat-pane { width: 100%; background: var(--bg-dark); display: flex; flex-direction: column; height: 100%; position: absolute; inset: 0; z-index: 5; }
+    .chat-pane { width: 100%; background: var(--bg-dark); display: flex; flex-direction: column; height: 100%; position: absolute; inset: 0; z-index: 20; }
     .chat-pane.hidden-mobile { display: none; }
     
     .chat-header { padding: 10px 14px; background: var(--card-bg); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
@@ -87,8 +87,8 @@
     .btn-circle { width: 40px; height: 40px; border-radius: 50%; padding: 0; flex-shrink: 0; }
 
     /* НИЖНЯЯ НАВИГАЦИЯ */
-    .bottom-nav { background: var(--card-bg); border-top: 1px solid var(--border); display: flex; justify-content: space-around; padding: 8px 0; padding-bottom: calc(8px + env(safe-area-inset-bottom)); }
-    .nav-btn { background: none; border: none; color: var(--text-sub); display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 11px; flex: 1; }
+    .bottom-nav { background: var(--card-bg); border-top: 1px solid var(--border); display: flex; justify-content: space-around; padding: 8px 0; padding-bottom: calc(8px + env(safe-area-inset-bottom)); z-index: 10; }
+    .nav-btn { background: none; border: none; color: var(--text-sub); display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 11px; flex: 1; cursor: pointer; }
     .nav-btn.active { color: var(--accent); font-weight: bold; }
     .nav-btn .icon { font-size: 20px; }
 
@@ -105,18 +105,18 @@
     /* Десктоп адаптация */
     @media (min-width: 769px) {
       .contacts-pane { width: 320px; }
-      .chat-pane { position: relative; width: auto; flex: 1; display: flex !important; }
+      .chat-pane { position: relative; width: auto; flex: 1; display: flex !important; z-index: 1; }
       .btn-back { display: none; }
     }
   </style>
 </head>
 <body>
 
-  <!-- Окно авторизации / входа -->
+  <!-- Окно авторизации -->
   <div class="auth-overlay" id="authScreen">
     <div class="auth-card">
       <h2>Вход в STmedia</h2>
-      <p style="font-size: 12px; color: var(--text-sub);">Введите Логин и Пароль. ID привязывается к ним навсегда.</p>
+      <p style="font-size: 12px; color: var(--text-sub);">Введите Логин и Пароль. ID привязан к ним навсегда.</p>
       <input type="text" id="authLogin" placeholder="Логин">
       <input type="password" id="authPass" placeholder="Пароль">
       <button class="btn" onclick="performAuth()">Войти / Зарегистрироваться</button>
@@ -135,7 +135,7 @@
     </div>
   </div>
 
-  <!-- Контент приложений -->
+  <!-- Контент страниц -->
   <div class="main-content">
     
     <!-- Вкладка Чаты -->
@@ -158,7 +158,7 @@
               <div class="avatar" id="chatAvatar">?</div>
               <div>
                 <b id="activeContactName" style="font-size: 15px;">Выберите контакт</b>
-                <div id="activeContactStatus" style="font-size: 11px; color: var(--text-sub);">offline</div>
+                <div id="activeContactStatus" style="font-size: 11px; color: var(--accent);">онлайн</div>
               </div>
             </div>
             <div style="display: flex; gap: 6px;">
@@ -251,14 +251,13 @@
     let chatsHistory = {};
     let myProfile = { nick: "Пользователь", avatar: "" };
 
-    // Постоянная генерация ID на основе логина и пароля
     async function generateStaticId(login, password) {
       const text = `stmedia_salt_${login.trim().toLowerCase()}_${password}`;
       const msgUint8 = new TextEncoder().encode(text);
       const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
       const hashArray = Array.from(new Uint8Array(hashBuffer));
       const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-      return 'st_' + hashHex.substring(0, 12);
+      return 'st_' + hashHex.substring(0, 10);
     }
 
     async function performAuth() {
@@ -268,7 +267,6 @@
 
       myPeerId = await generateStaticId(login, pass);
       localStorage.setItem('st_auth_id', myPeerId);
-      localStorage.setItem('st_login', login);
 
       document.getElementById('authScreen').style.display = 'none';
       initApp();
@@ -280,24 +278,26 @@
       document.getElementById('inputNick').value = myProfile.nick;
       updateAvatarDisplay();
 
-      // Подключение PeerJS с продвинутыми STUN/TURN (работает с VPN)
+      // Усиленное P2P подключение
       peer = new Peer(myPeerId, {
+        debug: 1,
         config: {
           iceServers: [
             { urls: 'stun:stun.l.google.com:19302' },
             { urls: 'stun:stun1.l.google.com:19302' },
-            { urls: 'stun:openrelay.metered.ca:80' }
+            { urls: 'stun:stun2.l.google.com:19302' },
+            { urls: 'stun:global.stun.twilio.com:3478' }
           ]
         }
       });
 
       peer.on('open', (id) => {
-        console.log('Подключено к сети PeerJS с ID:', id);
+        console.log('Подключено к серверу, мой ID:', id);
       });
 
       peer.on('connection', (c) => {
         conn = c;
-        setupConnectionListeners();
+        bindConnectionEvents();
       });
 
       peer.on('call', handleIncomingCall);
@@ -306,7 +306,6 @@
       setupVoiceRecording();
     }
 
-    // Загрузка и сохранение истории
     function loadData() {
       const prefix = myPeerId + '_';
       contacts = JSON.parse(localStorage.getItem(prefix + 'contacts') || '[]');
@@ -328,8 +327,8 @@
       }
     }
 
-    // Соединение и сообщения
-    function setupConnectionListeners() {
+    function bindConnectionEvents() {
+      if (!conn) return;
       conn.on('data', (data) => {
         if (data.type === 'msg' || data.type === 'voice') {
           saveIncomingMsg(data.senderId, data);
@@ -351,10 +350,17 @@
         avatarEl.innerText = contact.name[0].toUpperCase();
       }
 
-      conn = peer.connect(contact.peerId);
-      setupConnectionListeners();
-
+      // Переключаем экран чата на мобильном
       document.getElementById('chatPane').classList.remove('hidden-mobile');
+
+      // Создаем соединение
+      try {
+        conn = peer.connect(selectedPeerId, { reliable: true });
+        bindConnectionEvents();
+      } catch (e) {
+        console.log("Ошибка подключения:", e);
+      }
+
       renderContacts();
       renderMessages();
     }
@@ -384,8 +390,9 @@
       if (conn && conn.open) {
         conn.send(msgObj);
       } else if (selectedPeerId) {
-        conn = peer.connect(selectedPeerId);
+        conn = peer.connect(selectedPeerId, { reliable: true });
         conn.on('open', () => conn.send(msgObj));
+        bindConnectionEvents();
       }
 
       if (input) input.value = '';
@@ -423,11 +430,11 @@
       area.scrollTop = area.scrollHeight;
     }
 
-    // Голосовые сообщения
     function setupVoiceRecording() {
       const btn = document.getElementById('voiceBtn');
       
-      btn.addEventListener('pointerdown', async () => {
+      const startRec = async (e) => {
+        e.preventDefault();
         try {
           const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
           mediaRecorder = new MediaRecorder(stream);
@@ -445,24 +452,34 @@
           mediaRecorder.start();
           btn.style.background = '#ef4444';
         } catch (err) {
-          alert('Доступ к микрофону отклонен.');
+          alert('Доступ к микрофону не предоставлен');
         }
-      });
+      };
 
-      btn.addEventListener('pointerup', () => {
+      const stopRec = (e) => {
+        e.preventDefault();
         if (mediaRecorder && mediaRecorder.state === 'recording') {
           mediaRecorder.stop();
           btn.style.background = 'var(--border)';
         }
-      });
+      };
+
+      btn.addEventListener('touchstart', startRec);
+      btn.addEventListener('touchend', stopRec);
+      btn.addEventListener('mousedown', startRec);
+      btn.addEventListener('mouseup', stopRec);
     }
 
-    // Контакты
     function addContact() {
       const name = prompt('Имя контакта:');
       if (!name) return;
-      const peerId = prompt('ID контакта (начинается с st_):');
+      let peerId = prompt('ID контакта:');
       if (!peerId) return;
+
+      peerId = peerId.trim();
+      if (!peerId.startsWith('st_')) {
+        peerId = 'st_' + peerId;
+      }
 
       contacts.push({ name, peerId, avatar: "" });
       saveData();
@@ -473,7 +490,7 @@
       const list = document.getElementById('contactsList');
       list.innerHTML = '';
       if (contacts.length === 0) {
-        list.innerHTML = '<div style="font-size:12px; color:var(--text-sub); text-align:center; padding:20px;">Нет контактов</div>';
+        list.innerHTML = '<div style="font-size:12px; color:var(--text-sub); text-align:center; padding:20px;">Список контактов пуст</div>';
         return;
       }
       contacts.forEach(c => {
@@ -490,7 +507,6 @@
       });
     }
 
-    // Аватар и профиль
     function handleAvatarUpload(input) {
       if (input.files && input.files[0]) {
         const reader = new FileReader();
@@ -518,7 +534,6 @@
       alert('Профиль сохранен!');
     }
 
-    // Навигация
     function switchTab(id) {
       document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
       document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
@@ -528,10 +543,9 @@
 
     function copyMyId() {
       navigator.clipboard.writeText(myPeerId);
-      alert('Ваш бессменный ID скопирован: ' + myPeerId);
+      alert('Ваш ID скопирован: ' + myPeerId);
     }
 
-    // Видео/Аудио вызовы
     function startCall(enableVideo) {
       if (!selectedPeerId) return alert('Выберите контакт!');
       navigator.mediaDevices.getUserMedia({ video: enableVideo, audio: true }).then((stream) => {
@@ -572,7 +586,6 @@
       document.getElementById('flashUrlInput').value = '';
     }
 
-    // Проверка сохраненной сессии при старте
     const savedAuthId = localStorage.getItem('st_auth_id');
     if (savedAuthId) {
       myPeerId = savedAuthId;
